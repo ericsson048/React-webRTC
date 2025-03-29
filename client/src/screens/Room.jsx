@@ -3,6 +3,7 @@ import ReactPlayer from "react-player";
 import peer from "../service/peer";
 import { useSocket } from "../context/SocketProvider";
 import { useParams, useNavigate } from "react-router-dom";
+import "./Room.css";
 
 const RoomPage = () => {
   const socket = useSocket();
@@ -18,6 +19,8 @@ const RoomPage = () => {
   const [error, setError] = useState("");
   const [isCallInProgress, setIsCallInProgress] = useState(false);
   const [isCameraInitializing, setIsCameraInitializing] = useState(true);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
 
   // Initialiser le flux vidéo local
   const initializeMediaStream = useCallback(async () => {
@@ -33,6 +36,13 @@ const RoomPage = () => {
         video: true,
       });
       
+      // S'assurer que les tracks suivent l'état actuel
+      const videoTrack = stream.getVideoTracks()[0];
+      const audioTrack = stream.getAudioTracks()[0];
+      
+      if (videoTrack) videoTrack.enabled = isVideoEnabled;
+      if (audioTrack) audioTrack.enabled = isAudioEnabled;
+      
       console.log("Flux vidéo obtenu:", stream);
       myStreamRef.current = stream;
       isInitializedRef.current = true;
@@ -44,7 +54,7 @@ const RoomPage = () => {
       setIsCameraInitializing(false);
       throw err;
     }
-  }, []);
+  }, [isVideoEnabled, isAudioEnabled]);
 
   // Nettoyer les ressources à la fermeture
   const cleanup = useCallback(() => {
@@ -328,6 +338,30 @@ const RoomPage = () => {
     }
   };
 
+  // Fonction pour activer/désactiver la vidéo
+  const toggleVideo = useCallback(() => {
+    if (myStreamRef.current) {
+      const videoTrack = myStreamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !isVideoEnabled;
+        setIsVideoEnabled(!isVideoEnabled);
+        console.log('Video track enabled:', !isVideoEnabled);
+      }
+    }
+  }, [isVideoEnabled]);
+
+  // Fonction pour activer/désactiver l'audio
+  const toggleAudio = useCallback(() => {
+    if (myStreamRef.current) {
+      const audioTrack = myStreamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !isAudioEnabled;
+        setIsAudioEnabled(!isAudioEnabled);
+        console.log('Audio track enabled:', !isAudioEnabled);
+      }
+    }
+  }, [isAudioEnabled]);
+
   return (
     <div className="room-container">
       {error && (
@@ -338,6 +372,21 @@ const RoomPage = () => {
           </button>
         </div>
       )}
+
+      <div className="controls">
+        <button 
+          onClick={toggleVideo}
+          className={`control-btn ${isVideoEnabled ? 'active' : ''}`}
+        >
+          {isVideoEnabled ? '🎥' : '🚫'} Caméra
+        </button>
+        <button 
+          onClick={toggleAudio}
+          className={`control-btn ${isAudioEnabled ? 'active' : ''}`}
+        >
+          {isAudioEnabled ? '🎤' : '🚫'} Micro
+        </button>
+      </div>
 
       {/* Barre de participants en haut */}
       <div className="participants-bar">
